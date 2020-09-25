@@ -15,12 +15,12 @@ C:\Program Files (x86)\zxing\Include\zxing\common\Array.h(72): message : while c
           [
               T=zxing::Ref<zxing::ResultPoint>
           ]
-C:\Users\dajo\source\repos\Project3\Project3\Source.cpp(249): message : see reference to function template instantiation 'int zxing::Array<T>::size(void) const' being compiled
+C:\Users\dajo\source\repos\Project3\Project3\Source.cpp(138): message : see reference to function template instantiation 'int zxing::Array<T>::size(void) const' being compiled
           with
           [
               T=zxing::Ref<zxing::ResultPoint>
           ]
-C:\Users\dajo\source\repos\Project3\Project3\Source.cpp(249): message : see reference to class template instantiation 'zxing::Array<T>' being compiled
+C:\Users\dajo\source\repos\Project3\Project3\Source.cpp(138): message : see reference to class template instantiation 'zxing::Array<T>' being compiled
           with
           [
               T=zxing::Ref<zxing::ResultPoint>

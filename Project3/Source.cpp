@@ -110,6 +110,128 @@ Point toCvPoint(Ref<ResultPoint> resultPoint) {
     return Point(resultPoint->getX(), resultPoint->getY());
 }
 
+
+int state = 0;
+void decoder(cv::Mat image)
+{
+
+
+    // Create luminance  source
+    try
+    {
+        zxing::Ref<zxing::LuminanceSource> source = MatSource::create(image);
+        state = 1;
+        zxing::Ref<zxing::Reader> reader;
+        state = 2;
+        reader.reset(new zxing::datamatrix::DataMatrixReader);
+        state = 3;
+        zxing::Ref<zxing::Binarizer> binarizer(new zxing::GlobalHistogramBinarizer(source));//HybridBinarizer GlobalHistogramBinarizer
+        state = 4;
+        zxing::Ref<zxing::BinaryBitmap> bitmap(new zxing::BinaryBitmap(binarizer));
+        state = 5;
+        zxing::DecodeHintType hint = zxing::DecodeHints::DATA_MATRIX_HINT | zxing::DecodeHints::TRYHARDER_HINT; // |  zxing::DecodeHints::TRYHARDER_HINT
+        //cv::imshow("window", bitmap->getBlackMatrix());
+        zxing::Ref<zxing::Result> result(reader->decode(bitmap, zxing::DecodeHints(hint)));
+        state = 6;
+
+        // Get result point count
+        int resultPointCount = result->getResultPoints()->size();
+        state = 7;
+
+        for (int j = 0; j < resultPointCount; j++) {
+
+            // Draw circle
+            cv::circle(image, toCvPoint(result->getResultPoints()[j]), 0, cv::Scalar(110, 220, 0), 2);
+
+        }
+        state = 8;
+
+        // Draw boundary on image
+        if (resultPointCount > 1) {
+            state = 9;
+            for (int j = 0; j < resultPointCount; j++) {
+
+                // Get start result point
+                zxing::Ref<zxing::ResultPoint> previousResultPoint = (j > 0) ? result->getResultPoints()[j - 1] : result->getResultPoints()[resultPointCount - 1];
+
+                // Draw line
+                cv::line(image, toCvPoint(previousResultPoint), toCvPoint(result->getResultPoints()[j]), cv::Scalar(110, 220, 0), 2, 8);
+
+                // Update previous point
+                previousResultPoint = result->getResultPoints()[j];
+
+            }
+
+        }
+        state = 10;
+        if (resultPointCount > 0) {
+            state = 11;
+            // Draw text
+            cv::putText(image, result->getText()->getText(), toCvPoint(result->getResultPoints()[0]), cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(110, 220, 0));
+            cout << result->getText()->getText() << endl;
+        }
+
+        cv::imshow("window", image);
+        cv::waitKey(0);
+    }
+    catch (const zxing::ReaderException& e) {
+        cerr << e.what() << state << " (ignoring)" << endl;
+
+    }
+    catch (const zxing::IllegalArgumentException& e) {
+        cerr << e.what() << state << " (ignoring)" << endl;
+    }
+    catch (const zxing::Exception& e) {
+        cerr << e.what() << state << " (ignoring)" << endl;
+    }
+    catch (const std::exception& e) {
+        cerr << e.what() << state << " (ignoring)" << endl;
+    }
+
+
+}
+
+
+void fixImage(cv::Mat img,cv::Mat oImg)
+{
+    // Find all contours in the image
+    vector<vector<cv::Point> > contours;
+    vector<cv::Vec4i> hierarchy;
+    cv::Mat imgGray, imgThres;
+
+    cv::cvtColor(img, imgGray, cv::COLOR_BGR2GRAY);
+    cv::threshold(imgGray, imgThres, 100, 255, cv::THRESH_BINARY);
+    // Find all contours in the image
+    findContours(imgThres, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+    cv::Point2f rect_points[4];
+    cv::Mat boxPoints2f, boxPointsCov;
+    cv::Rect rect;
+    for (size_t i = 0; i < contours.size(); i++) {
+        // Vertical rectangle
+        if (contours[i].size() < 200) continue;
+
+        rect = boundingRect(contours[i]);
+
+        cv::Mat boxed = cv::Mat(imgGray, rect);
+
+        cv::Point centerpoint = cv::Point(boxed.cols / 2, boxed.rows / 2);
+
+        double angle = minAreaRect(contours[i]).angle;
+        double scale = 1;
+        cv::Mat rot_mat = getRotationMatrix2D(centerpoint, angle, scale);
+        cv::Mat warp_rotate_dst;
+        warpAffine(boxed, boxed, rot_mat, boxed.size());
+        //cv::waitKey(0);
+        cv::imshow("test", boxed);
+
+        cv::waitKey(0);
+        oImg = boxed.clone();
+        return;
+    }
+
+}
+
+
 int main(int argc, char** argv) {
 
     int deviceId = 0;
@@ -222,88 +344,11 @@ int main(int argc, char** argv) {
 
         if (result) {
 
-            //image = Mat(image,)
-            // Convert to grayscale
-            cvtColor(image, grey, CV_BGR2GRAY);
-
-            try {
-
-                // Create luminance  source
-                Ref<LuminanceSource> source = MatSource::create(grey);
-
-                // Search for QR code
-                Ref<Reader> reader;
-
-                if (0) {
-                    reader.reset(new MultiFormatReader);
-                }
-                else {
-                    reader.reset(new datamatrix::DataMatrixReader);
-                }
-
-                Ref<Binarizer> binarizer(new GlobalHistogramBinarizer(source));
-                Ref<BinaryBitmap> bitmap(new BinaryBitmap(binarizer));
-                Ref<Result> result(reader->decode(bitmap, DecodeHints(DecodeHints::TRYHARDER_HINT)));
-
-                // Get result point count
-                int resultPointCount = result->getResultPoints()->size();
-
-                for (int j = 0; j < resultPointCount; j++) {
-
-                    // Draw circle
-                    circle(image, toCvPoint(result->getResultPoints()[j]), 0, Scalar(110, 220, 0), 2);
-
-                }
-
-                // Draw boundary on image
-                if (resultPointCount > 1) {
-
-                    for (int j = 0; j < resultPointCount; j++) {
-
-                        // Get start result point
-                        Ref<ResultPoint> previousResultPoint = (j > 0) ? result->getResultPoints()[j - 1] : result->getResultPoints()[resultPointCount - 1];
-
-                        // Draw line
-                        line(image, toCvPoint(previousResultPoint), toCvPoint(result->getResultPoints()[j]), Scalar(110, 220, 0), 2, 8);
-
-                        // Update previous point
-                        previousResultPoint = result->getResultPoints()[j];
-
-                    }
-
-                }
-
-                if (resultPointCount > 0) {
-
-                    // Draw text
-                    putText(image, result->getText()->getText(), toCvPoint(result->getResultPoints()[0]), FONT_HERSHEY_PLAIN, 1, Scalar(110, 220, 0));
-
-                }
-
-            }
-            catch (const ReaderException& e) {
-                cerr << e.what() << " (ignoring)" << endl;
-            }
-            catch (const zxing::IllegalArgumentException& e) {
-                cerr << e.what() << " (ignoring)" << endl;
-            }
-            catch (const zxing::Exception& e) {
-                cerr << e.what() << " (ignoring)" << endl;
-            }
-            catch (const std::exception& e) {
-                cerr << e.what() << " (ignoring)" << endl;
-            }
-
-            while (waitKey(10)<= 0)
-            {
-                // Show captured image
-                imshow("ZXing", image);
-            }
-            
-
-            // Wait a key for 1 millis
-            stopped = waitKey(1);
-
+            cv::Mat img;
+            fixImage(image, img);
+           // if(img != NULL)
+           //     decoder(img);
+           
         }
         else {
 
