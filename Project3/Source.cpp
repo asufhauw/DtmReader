@@ -1,18 +1,4 @@
-/*
- *  Copyright 2010-2011 Alessandro Francescon
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+
 
 #include <string>
 #include <exception>
@@ -110,8 +96,6 @@ Point toCvPoint(Ref<ResultPoint> resultPoint) {
     return Point(resultPoint->getX(), resultPoint->getY());
 }
 
-
-int state = 0;
 void decoder(cv::Mat image)
 {
 
@@ -120,23 +104,16 @@ void decoder(cv::Mat image)
     try
     {
         zxing::Ref<zxing::LuminanceSource> source = MatSource::create(image);
-        state = 1;
         zxing::Ref<zxing::Reader> reader;
-        state = 2;
         reader.reset(new zxing::datamatrix::DataMatrixReader);
-        state = 3;
         zxing::Ref<zxing::Binarizer> binarizer(new zxing::GlobalHistogramBinarizer(source));//HybridBinarizer GlobalHistogramBinarizer
-        state = 4;
         zxing::Ref<zxing::BinaryBitmap> bitmap(new zxing::BinaryBitmap(binarizer));
-        state = 5;
         zxing::DecodeHintType hint = zxing::DecodeHints::DATA_MATRIX_HINT | zxing::DecodeHints::TRYHARDER_HINT; // |  zxing::DecodeHints::TRYHARDER_HINT
         //cv::imshow("window", bitmap->getBlackMatrix());
         zxing::Ref<zxing::Result> result(reader->decode(bitmap, zxing::DecodeHints(hint)));
-        state = 6;
 
         // Get result point count
         int resultPointCount = result->getResultPoints()->size();
-        state = 7;
 
         for (int j = 0; j < resultPointCount; j++) {
 
@@ -144,11 +121,9 @@ void decoder(cv::Mat image)
             cv::circle(image, toCvPoint(result->getResultPoints()[j]), 0, cv::Scalar(110, 220, 0), 2);
 
         }
-        state = 8;
-
+       
         // Draw boundary on image
         if (resultPointCount > 1) {
-            state = 9;
             for (int j = 0; j < resultPointCount; j++) {
 
                 // Get start result point
@@ -163,9 +138,7 @@ void decoder(cv::Mat image)
             }
 
         }
-        state = 10;
         if (resultPointCount > 0) {
-            state = 11;
             // Draw text
             cv::putText(image, result->getText()->getText(), toCvPoint(result->getResultPoints()[0]), cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(110, 220, 0));
             cout << result->getText()->getText() << endl;
@@ -175,17 +148,17 @@ void decoder(cv::Mat image)
         cv::waitKey(0);
     }
     catch (const zxing::ReaderException& e) {
-        cerr << e.what() << state << " (ignoring)" << endl;
+        cerr << e.what() << " (ignoring)" << endl;
 
     }
     catch (const zxing::IllegalArgumentException& e) {
-        cerr << e.what() << state << " (ignoring)" << endl;
+        cerr << e.what()  << " (ignoring)" << endl;
     }
     catch (const zxing::Exception& e) {
-        cerr << e.what() << state << " (ignoring)" << endl;
+        cerr << e.what() << " (ignoring)" << endl;
     }
     catch (const std::exception& e) {
-        cerr << e.what() << state << " (ignoring)" << endl;
+        cerr << e.what() << " (ignoring)" << endl;
     }
 
 
@@ -232,6 +205,115 @@ void fixImage(cv::Mat img,cv::Mat oImg)
 }
 
 
+double dot(Vec4f u, Vec4f v)
+{
+    double sigma = 0;
+    for (size_t i = 0; i < 4; i++)
+    {
+        sigma += u[i] * v[i];
+    }
+    return sigma;
+}
+double pi = 3.1415926535897;
+bool isPerp(Vec4f line1, Vec4f line2)
+{
+
+    double dot1 = dot(line1, line2);
+    double dot2 = dot(Vec4f(0,0,1,0), Vec4f(0, 0, 0, 1));
+    std::cout << dot1 << endl;
+    std::cout << dot2 << endl;
+    if (dot1 < 0.01)
+        return true;
+    else
+    {
+        double abs_line1 = dot(line1, line1);
+        std::cout << "||line1|| == "<< std::sqrt(abs_line1) << std::endl;
+        double abs_line2 = dot(line2, line2);
+        std::cout <<"||line2|| == "<< std::sqrt(abs_line2) << std::endl;
+        double angle = std::acos(dot1 / (abs_line1 * abs_line2));
+        std::cout << "Vinkel: " << angle << std::endl;
+        if (abs(angle - pi / 2) < 0.01)
+        {
+            std::cout << abs(angle - pi / 2) << std::endl;
+            return true;
+        }
+         
+    }
+    return false;
+
+
+}
+
+#include <opencv2/ximgproc/fast_line_detector.hpp>
+void detector(cv::Mat img, cv::Mat oImg)
+{
+    // Create FLD detector
+    // Param               Default value   Description
+    // length_threshold    10            - Segments shorter than this will be discarded
+    // distance_threshold  1.41421356    - A point placed from a hypothesis line
+    //                                     segment farther than this will be
+    //                                     regarded as an outlier
+    // canny_th1           50            - First threshold for
+    //                                     hysteresis procedure in Canny()
+    // canny_th2           50            - Second threshold for
+    //                                     hysteresis procedure in Canny()
+    // canny_aperture_size 3             - Aperturesize for the sobel
+    //                                     operator in Canny()
+    // do_merge            false         - If true, incremental merging of segments
+    //                                     will be perfomred
+    int length_threshold = 20;
+    float distance_threshold = 1.41421356f;
+    double canny_th1 = 50;
+    double canny_th2 = 50;
+    int canny_aperture_size = 3;
+    bool do_merge = false;
+    if (img.channels() == 3)
+        cv::cvtColor(img, img, cv::COLOR_BGR2GRAY);
+    
+        
+    Ptr<cv::ximgproc::FastLineDetector> fld = cv::ximgproc::createFastLineDetector(length_threshold,
+        distance_threshold, canny_th1, canny_th2, canny_aperture_size,
+        do_merge);;
+
+    vector<Vec4f> lines_fld;
+    // Because of some CPU's power strategy, it seems that the first running of
+    // an algorithm takes much longer. So here we run the algorithm 10 times
+    // to see the algorithm's processing time with sufficiently warmed-up
+    // CPU performance.
+   // for (int run_count = 0; run_count < 10; run_count++) {
+    double freq = getTickFrequency();
+    lines_fld.clear();
+    int64 start = getTickCount();
+    // Detect the lines with FLD
+    fld->detect(img, lines_fld);
+    double duration_ms = double(getTickCount() - start) * 1000 / freq;
+    std::cout << "Elapsed time for FLD " << duration_ms << " ms." << std::endl;
+    for (size_t i = 0; i < lines_fld.size()-1; i++)
+    {
+      //  int x_1 = lines_fld[i];
+        std::cout << lines_fld[i] << std::endl;
+        std::cout << lines_fld[i+1] << std::endl;
+        isPerp(lines_fld[i], lines_fld[i + 1]);
+        std::vector<cv::Vec4f> lines;
+        lines.push_back(lines_fld[i]);
+        lines.push_back(lines_fld[i+1]);
+
+        Mat line_image_fld(img);
+        fld->drawSegments(line_image_fld, lines);
+        cv::imshow("FLD result", line_image_fld);
+        cv::waitKey(0);
+    }
+
+   // }
+    // Show found lines with FLD
+    Mat line_image_fld(img);
+    fld->drawSegments(line_image_fld, lines_fld);
+    cv::imshow("FLD result", line_image_fld);
+    cv::waitKey(0);
+
+    oImg = img.clone();
+}
+
 int main(int argc, char** argv) {
 
     int deviceId = 0;
@@ -239,90 +321,10 @@ int main(int argc, char** argv) {
     int captureHeight = 480;
     bool multi = false;
 
-    for (int j = 0; j < argc; j++) {
-
-        // Get arg
-        string arg = argv[j];
-         
-        if (arg.compare("-d") == 0) 
-        {
-            // Set device id
-            if ((j + 1) < argc) { 
-                deviceId = atoi(argv[++j]);
-            }
-            else {
-                // Log
-                cerr << "Missing device id after -d" << endl;
-                printUsage(argv);
-                return 1;
-            }
-
-        }
-        else if (arg.compare("-w") == 0)
-        { // Set capture width
-
-            if ((j + 1) < argc) {
-                
-                captureWidth = atoi(argv[++j]);
-            }
-            else {
-                // Log
-                cerr << "Missing width after -w" << endl;
-                printUsage(argv);
-                return 1;
-            }
-
-        }
-        else if (arg.compare("-h") == 0) 
-        {
-            // Set capture height
-            if ((j + 1) < argc) {
-                captureHeight = atoi(argv[++j]);
-            }
-            else {
-                // Log
-                cerr << "Missing height after -h" << endl;
-                printUsage(argv);
-                return 1;
-            }
-
-        }
-        else if (arg.compare("-m") == 0) {
-
-            // Set multi to true
-            multi = true;
-
-        }
-
-    }
-
-    // Log
-    cout << "Capturing from device " << deviceId << "..." << endl;
-
     // Open video captire
-    VideoCapture videoCapture(deviceId);
+   // VideoCapture videoCapture(deviceId);
+    
 
-    if (!videoCapture.isOpened()) {
-
-        // Log
-        cerr << "Open video capture failed on device id: " << deviceId << endl;
-        return -1;
-
-    }
-
-    if (!videoCapture.set(CV_CAP_PROP_FRAME_WIDTH, captureWidth)) {
-
-        // Log
-        cerr << "Failed to set frame width: " << captureWidth << " (ignoring)" << endl;
-
-    }
-
-    if (!videoCapture.set(CV_CAP_PROP_FRAME_HEIGHT, captureHeight)) {
-
-        // Log
-        cerr << "Failed to set frame height: " << captureHeight << " (ignoring)" << endl;
-
-    }
 
     // The captured image and its grey conversion
     Mat image, grey;
@@ -335,32 +337,23 @@ int main(int argc, char** argv) {
 
     //set the callback function for any mouse event
     cv::setMouseCallback("window", CallBackFunc, &image);
-    while (stopped == -1) {
+  
+    // Capture image
+    image = cv::imread("C:/Users/dajo/source/repos/Project3/x64/Debug/datamatrix2.jpg"); //videoCapture.read(image);
+    if (image.empty())
+        return -1;
+   // Show captured image
 
-        // Capture image
-        bool result = videoCapture.read(image);
-
-        // Show captured image
-
-        if (result) {
-
-            cv::Mat img;
-            fixImage(image, img);
-           // if(img != NULL)
-           //     decoder(img);
+     
+    cv::Mat img;
+    // fixImage(image, img);
+    detector(image, img);
+    // if(img != NULL)
+    // decoder(img);
            
-        }
-        else {
-
-            // Log
-            cerr << "video capture failed" << endl;
-
-        }
-
-    }
 
     // Release video capture
-    videoCapture.release();
+    //videoCapture.release();
 
     return 0;
 
