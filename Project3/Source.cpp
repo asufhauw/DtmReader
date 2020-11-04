@@ -1,5 +1,6 @@
 
 
+
 #include <string>
 #include <exception>
 #include <stdlib.h>
@@ -26,6 +27,7 @@ using namespace std;
 using namespace zxing;
 using namespace cv;
 
+double pi = 3.1415926535897;
 #if CV_MAJOR_VERSION >= 4
 #ifndef CV_CAP_PROP_FRAME_WIDTH
 #define CV_CAP_PROP_FRAME_WIDTH CAP_PROP_FRAME_WIDTH
@@ -205,63 +207,153 @@ void fixImage(cv::Mat img,cv::Mat oImg)
 }
 
 
+Vec2f norm(Vec4f u)
+{
+    return Vec2f(u[2] - u[0], u[3] - u[1]);
+}
+
+double Vec4fLength(Vec4f u);
+Vec4f normVec4f(Vec4f u)
+{
+    double l = Vec4fLength(u);
+    std::cout << l << std::endl;
+    return Vec4f(u[0] - l, u[1] - l, u[2] - l, u[3] - l);
+
+}
+
 double dot(Vec4f u, Vec4f v)
 {
+    Vec4f norm_u = normVec4f(u);
+    Vec4f norm_v = normVec4f(v);
+
     double sigma = 0;
     for (size_t i = 0; i < 4; i++)
+    {
+        sigma += norm_u[i] * norm_v[i];
+    }
+    return sigma;
+}
+
+double dot(Vec2f u, Vec2f v)
+{
+    double sigma = 0;
+    for (size_t i = 0; i < 2; i++)
     {
         sigma += u[i] * v[i];
     }
     return sigma;
 }
-double pi = 3.1415926535897;
-bool isPerp(Vec4f line1, Vec4f line2)
+
+double Vec4fLength(Vec4f u)
+{
+    Vec2f dest(u[0] - u[2], u[1] - u[3]);
+    return sqrt(dot(dest, dest));
+}
+double Vec2fLength(Vec2f u)
+{
+    return sqrt(dot(u,u));
+}
+double getAngle(Vec2f u)
+{
+    return atan(u[1] / u[0]);
+}
+double getAngle(Vec2f line1, Vec2f line2)
 {
 
     double dot1 = dot(line1, line2);
-    double dot2 = dot(Vec4f(0,0,1,0), Vec4f(0, 0, 0, 1));
-    std::cout << dot1 << endl;
-    std::cout << dot2 << endl;
-    if (dot1 < 0.01)
+    double abs_line1 = dot(line1, line1);
+    double abs_line2 = dot(line2, line2);
+    double angle = std::acos(dot(line1, line2) / sqrt(dot(line1, line1) * dot(line2, line2)));
+    std::cout << "angle: " << angle << "radians\t" << angle * 360 / (2 * pi) << "degrees" << std::endl;
+    return angle;
+}
+double getAngle(Vec4f line1, Vec4f line2)
+{
+
+ //   double dot1 = dot(line1, line2);
+ //   double abs_line1 = dot(line1, line1);
+ //   double abs_line2 = dot(line2, line2);
+ //   double angle = std::acos(dot(line1, line2) / sqrt(dot(line1, line1) * dot(line2, line2)));
+ //   std::cout << "angle: " << angle << "radians\t" << angle * 360 / (2*pi) << "degrees" << std::endl;
+    return getAngle(norm(line1),norm(line2));
+}
+
+bool isPerp(Vec4f u, Vec4f v)
+{
+    double udotv = dot(norm(u), norm(v));
+    std::cout << udotv << endl;
+    if (udotv < 0.01)
         return true;
     else
     {
-        double abs_line1 = dot(line1, line1);
-        std::cout << "||line1|| == "<< std::sqrt(abs_line1) << std::endl;
-        double abs_line2 = dot(line2, line2);
-        std::cout <<"||line2|| == "<< std::sqrt(abs_line2) << std::endl;
-        double angle = std::acos(dot1 / (abs_line1 * abs_line2));
-        std::cout << "Vinkel: " << angle << std::endl;
-        if (abs(angle - pi / 2) < 0.01)
-        {
-            std::cout << abs(angle - pi / 2) << std::endl;
+        if (abs(getAngle(norm(u), norm(v)) - pi / 2) < 0.01)
             return true;
-        }
-         
     }
     return false;
+}
 
+Vec4f diffVec4f(Vec4f u, Vec4f v)
+{
+    return Vec4f(u[0]-v[0], u[1] - v[1], u[2] - v[2], u[3] - v[3]);
+}
 
+Vec2f pointTheSame(Vec4f u, Vec4f v)
+{
+    Vec2f u_p1(u[0], u[1]);
+    Vec2f u_p2(u[2], u[3]);
+    Vec2f v_p1(v[0], v[1]);
+    Vec2f v_p2(v[2], v[3]);
+    if (dot(u_p1 - v_p1, u_p1 - v_p1) < 10)
+        return u_p1;
+    else if (dot(u_p2 - v_p1, u_p2 - v_p1) < 10)
+        return u_p2;
+    else if (dot(u_p2 - v_p2, u_p2 - v_p2) < 10)
+        return u_p2;
+    else if (dot(u_p1 - v_p2, u_p1 - v_p2) < 10)
+        return u_p1;
+    return Vec2f(-1,-1);
+}
+bool linesClose(Vec4f u, Vec4f v)
+{
+    Vec2f u_p1(u[0], u[1]);
+    Vec2f u_p2(u[2], u[3]);
+    Vec2f v_p1(v[0], v[1]);
+    Vec2f v_p2(v[2], v[3]);
+    double l1 = (dot(u_p1 - v_p1, u_p1 - v_p1));
+    double l2 = (dot(u_p2 - v_p1, u_p2 - v_p1));
+    double l3 = (dot(u_p2 - v_p2, u_p2 - v_p2));
+    double l4 = (dot(u_p1 - v_p2, u_p1 - v_p2));
+    if (l1<10)
+        return true;
+    else if (l2 < 10)
+        return true;
+    else if (l3 < 10)
+        return true;
+    else if (l4 < 10)
+        return true;
+    return false;
+    /*
+    if (abs(u[0] - v[0]) < 3 && abs(u[1] - v[1]) < 3)
+        return true;
+    else if (abs(u[2] - v[0]) < 3 && abs(u[3] - v[1]) < 3)
+        return true;
+    else if (abs(u[2] - v[2]) < 3 && abs(u[3] - v[3]) < 3)
+        return true;
+    return false;
+    */
+    
+}
+
+Vec2f mulPointMat(cv::Mat m, Vec2f p)
+{
+    return Vec2f(m.at<double>(0, 0) * p[0]+ m.at<double>(0, 1)*p[1], m.at<double>(1, 0) * p[0] + m.at<double>(1, 1) * p[1]);
 }
 
 #include <opencv2/ximgproc/fast_line_detector.hpp>
+
 void detector(cv::Mat img, cv::Mat oImg)
 {
-    // Create FLD detector
-    // Param               Default value   Description
-    // length_threshold    10            - Segments shorter than this will be discarded
-    // distance_threshold  1.41421356    - A point placed from a hypothesis line
-    //                                     segment farther than this will be
-    //                                     regarded as an outlier
-    // canny_th1           50            - First threshold for
-    //                                     hysteresis procedure in Canny()
-    // canny_th2           50            - Second threshold for
-    //                                     hysteresis procedure in Canny()
-    // canny_aperture_size 3             - Aperturesize for the sobel
-    //                                     operator in Canny()
-    // do_merge            false         - If true, incremental merging of segments
-    //                                     will be perfomred
-    int length_threshold = 20;
+    int length_threshold = 30;
     float distance_threshold = 1.41421356f;
     double canny_th1 = 50;
     double canny_th2 = 50;
@@ -269,8 +361,11 @@ void detector(cv::Mat img, cv::Mat oImg)
     bool do_merge = false;
     if (img.channels() == 3)
         cv::cvtColor(img, img, cv::COLOR_BGR2GRAY);
-    
-        
+    Mat thresholdImg;
+    cv::threshold(img, thresholdImg, 100, 255, cv::THRESH_BINARY);
+   // cv::imshow("FLD result", thresholdImg);
+   // cv::imshow("FLD result1", img);
+   // cv::waitKey(0);
     Ptr<cv::ximgproc::FastLineDetector> fld = cv::ximgproc::createFastLineDetector(length_threshold,
         distance_threshold, canny_th1, canny_th2, canny_aperture_size,
         do_merge);;
@@ -285,29 +380,68 @@ void detector(cv::Mat img, cv::Mat oImg)
     lines_fld.clear();
     int64 start = getTickCount();
     // Detect the lines with FLD
-    fld->detect(img, lines_fld);
+    fld->detect(thresholdImg, lines_fld);
     double duration_ms = double(getTickCount() - start) * 1000 / freq;
     std::cout << "Elapsed time for FLD " << duration_ms << " ms." << std::endl;
+    std::vector<cv::Vec2f> lines;
     for (size_t i = 0; i < lines_fld.size()-1; i++)
     {
-      //  int x_1 = lines_fld[i];
-        std::cout << lines_fld[i] << std::endl;
-        std::cout << lines_fld[i+1] << std::endl;
-        isPerp(lines_fld[i], lines_fld[i + 1]);
-        std::vector<cv::Vec4f> lines;
-        lines.push_back(lines_fld[i]);
-        lines.push_back(lines_fld[i+1]);
+        for (size_t j = i+1; j < lines_fld.size(); j++)
+        {
+            Vec4f u_hat = lines_fld[i];
+            Vec4f v_hat = lines_fld[j];
 
-        Mat line_image_fld(img);
-        fld->drawSegments(line_image_fld, lines);
-        cv::imshow("FLD result", line_image_fld);
-        cv::waitKey(0);
+            if (linesClose(u_hat,v_hat) && (abs(getAngle(u_hat, v_hat)- pi/2)<10)) //&& abs(Vec4fLength(u_hat) - Vec4fLength(v_hat))<20
+            {
+              
+                lines.push_back(Vec2f(u_hat[0], u_hat[1]));
+                lines.push_back(Vec2f(u_hat[2], u_hat[3]));
+                lines.push_back(Vec2f(v_hat[0], v_hat[1]));
+                lines.push_back(Vec2f(v_hat[2], v_hat[3]));
+                Vec2f norm_u = norm(u_hat);
+                double rotAngle = getAngle(norm_u);
+                // make roi
+                std::vector<Vec2f> points;
+                points.push_back(Vec2f(u_hat[0], u_hat[1]));
+                points.push_back(Vec2f(u_hat[2], u_hat[3]));
+                points.push_back(Vec2f(v_hat[0], v_hat[1]));
+                points.push_back(Vec2f(v_hat[2], v_hat[3]));
+
+                Vec4f roi(norm(u_hat)[0], norm(u_hat)[1], norm(v_hat)[0], norm(v_hat)[1]);
+                Mat rotMat = getRotationMatrix2D(Point2f(u_hat[0], u_hat[1]), rotAngle*180/pi, 1);
+                
+                for (size_t i = 0; i < points.size(); i++)
+                {
+                    points[i] = mulPointMat(rotMat,points[i]);
+                }
+
+                for (size_t i = 0; i < lines.size(); i++)
+                {
+                    ;// lines[i] = mulPointMat(rotMat, lines[i]);
+                }
+                std::vector<Vec4f> l;
+                for (size_t i = 0; i < lines.size()-2; i+=2)
+                {
+                    l.push_back(Vec4f(points[i][0], points[i][1], points[i+1][0], points[i+1][1]));
+                }
+                warpAffine(img, thresholdImg, rotMat,img.size());
+                
+                // decode the shit....
+                Mat line_image_fld(thresholdImg);
+                fld->drawSegments(line_image_fld, l,false); // lines
+                cv::imshow("FLD result1", line_image_fld);
+                cv::waitKey(0);
+            }
+            
+        }
+      //  int x_1 = lines_fld[i];
+       
     }
 
    // }
     // Show found lines with FLD
     Mat line_image_fld(img);
-    fld->drawSegments(line_image_fld, lines_fld);
+    fld->drawSegments(line_image_fld, lines);
     cv::imshow("FLD result", line_image_fld);
     cv::waitKey(0);
 
@@ -323,8 +457,12 @@ int main(int argc, char** argv) {
 
     // Open video captire
    // VideoCapture videoCapture(deviceId);
-    
+    Vec4f u(0, 0, 2, 0);
+    Vec4f v(0, 0, 0, -2);
+    double angle = getAngle(norm(u), norm(v));
+    std::cout << "norm u: " << norm(u) << "\tv norm: " << norm(v) << std::endl;
 
+    std::cout << "angle: " << angle << "\tGrader: " << angle * 180 / pi << std::endl;
 
     // The captured image and its grey conversion
     Mat image, grey;
@@ -339,7 +477,8 @@ int main(int argc, char** argv) {
     cv::setMouseCallback("window", CallBackFunc, &image);
   
     // Capture image
-    image = cv::imread("C:/Users/dajo/source/repos/Project3/x64/Debug/datamatrix2.jpg"); //videoCapture.read(image);
+    image = cv::imread("C:/Users/johan/Projects/DtmReader/x64/Debug/datamatrix2.jpg"); //datamatrix2.jpg datamatrix.png
+
     if (image.empty())
         return -1;
    // Show captured image
