@@ -1,30 +1,43 @@
 ﻿  Source.cpp
-C:\Users\dajo\source\repos\Project3\Project3\Source.cpp(96,56): warning C4244: 'argument': conversion from 'float' to '_Tp', possible loss of data
+C:\Users\dajo\source\repos\Project3\Project3\Source.cpp(25,31): warning C4244: '=': conversion from 'time_t' to 'unsigned long', possible loss of data
+C:\Users\dajo\source\repos\Project3\Project3\Source.cpp(60,44): warning C4244: 'argument': conversion from 'double' to '_Tp', possible loss of data
           with
           [
               _Tp=int
           ]
-C:\Users\dajo\source\repos\Project3\Project3\Source.cpp(96,35): warning C4244: 'argument': conversion from 'float' to '_Tp', possible loss of data
+C:\Users\dajo\source\repos\Project3\Project3\Source.cpp(60,29): warning C4244: 'argument': conversion from 'double' to '_Tp', possible loss of data
           with
           [
               _Tp=int
           ]
-C:\Users\dajo\source\repos\Project3\Project3\Source.cpp(213,21): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-C:\Users\dajo\source\repos\Project3\Project3\Source.cpp(213,28): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-C:\Program Files (x86)\zxing\Include\zxing\common\Array.h(73,1): warning C4267: 'return': conversion from 'size_t' to 'int', possible loss of data
-C:\Program Files (x86)\zxing\Include\zxing\common\Array.h(72): message : while compiling class template member function 'int zxing::Array<T>::size(void) const'
+C:\Users\dajo\source\repos\Project3\Project3\Source.cpp(61,45): warning C4244: 'argument': conversion from 'double' to '_Tp', possible loss of data
           with
           [
-              T=zxing::Ref<zxing::ResultPoint>
+              _Tp=int
           ]
-C:\Users\dajo\source\repos\Project3\Project3\Source.cpp(116): message : see reference to function template instantiation 'int zxing::Array<T>::size(void) const' being compiled
+C:\Users\dajo\source\repos\Project3\Project3\Source.cpp(61,30): warning C4244: 'argument': conversion from 'double' to '_Tp', possible loss of data
           with
           [
-              T=zxing::Ref<zxing::ResultPoint>
+              _Tp=int
           ]
-C:\Users\dajo\source\repos\Project3\Project3\Source.cpp(116): message : see reference to class template instantiation 'zxing::Array<T>' being compiled
+C:\Users\dajo\source\repos\Project3\Project3\Source.cpp(62,48): warning C4244: 'argument': conversion from 'double' to '_Tp', possible loss of data
           with
           [
-              T=zxing::Ref<zxing::ResultPoint>
+              _Tp=int
+          ]
+C:\Users\dajo\source\repos\Project3\Project3\Source.cpp(62,33): warning C4244: 'argument': conversion from 'double' to '_Tp', possible loss of data
+          with
+          [
+              _Tp=int
+          ]
+C:\Users\dajo\source\repos\Project3\Project3\Source.cpp(63,47): warning C4244: 'argument': conversion from 'double' to '_Tp', possible loss of data
+          with
+          [
+              _Tp=int
+          ]
+C:\Users\dajo\source\repos\Project3\Project3\Source.cpp(63,32): warning C4244: 'argument': conversion from 'double' to '_Tp', possible loss of data
+          with
+          [
+              _Tp=int
           ]
   Project3.vcxproj -> C:\Users\dajo\source\repos\Project3\x64\Debug\Project3.exe
